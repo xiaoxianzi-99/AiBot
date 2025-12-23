@@ -10,6 +10,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
@@ -50,7 +51,7 @@ public class ChatController {
 
         // Send message on Enter key
         messageInput.setOnKeyPressed(event -> {
-            if (event.getCode() == javafx.scene.input.KeyCode.ENTER && !event.isShiftDown()) {
+            if (event.getCode() == KeyCode.ENTER && !event.isShiftDown()) {
                 event.consume();
                 handleSendMessage();
             }

@@ -62,12 +62,14 @@ public class AiService {
     
     /**
      * Mock AI response for demonstration
+     * Note: The delay here simulates network latency for demonstration purposes
+     * In production with real API, this delay would naturally occur during HTTP request
      * @param message User message
      * @return Mock AI response
      */
     private String getMockResponse(String message) {
-        // Simulate some processing time without blocking
-        // In production, this would be replaced with actual async API call
+        // Simulate network latency for demonstration purposes
+        // In production, this would be replaced with actual async API call which has natural latency
         try {
             Thread.sleep(500);
         } catch (InterruptedException e) {
