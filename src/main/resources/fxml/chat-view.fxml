@@ -48,11 +48,7 @@
                          promptText="输入消息..." 
                          wrapText="true"
                          prefRowCount="2"
-                         styleClass="message-input">
-                    <HBox.margin>
-                        <Insets/>
-                    </HBox.margin>
-                </TextArea>
+                         styleClass="message-input"/>
                 <Button fx:id="sendButton" 
                        text="发送" 
                        onAction="#handleSendMessage"

@@ -13,6 +13,9 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /**
  * Controller for the chat view
  * @author 帕斯卡的芦苇
@@ -33,10 +36,12 @@ public class ChatController {
     private Button sendButton;
 
     private AiService aiService;
+    private ExecutorService executorService;
 
     @FXML
     public void initialize() {
         aiService = new AiService();
+        executorService = Executors.newSingleThreadExecutor();
         
         // Auto-scroll to bottom when new messages are added
         chatContainer.heightProperty().addListener((observable, oldValue, newValue) -> {
@@ -45,7 +50,7 @@ public class ChatController {
 
         // Send message on Enter key
         messageInput.setOnKeyPressed(event -> {
-            if (event.getCode().toString().equals("ENTER") && !event.isShiftDown()) {
+            if (event.getCode() == javafx.scene.input.KeyCode.ENTER && !event.isShiftDown()) {
                 event.consume();
                 handleSendMessage();
             }
@@ -73,7 +78,7 @@ public class ChatController {
         sendButton.setDisable(true);
         
         // Send to AI service (async)
-        new Thread(() -> {
+        executorService.submit(() -> {
             try {
                 String aiResponse = aiService.sendMessage(userMessage);
                 
@@ -83,12 +88,16 @@ public class ChatController {
                     sendButton.setDisable(false);
                 });
             } catch (Exception e) {
+                // Log the detailed error for debugging
+                System.err.println("Error calling AI service: " + e.getMessage());
+                e.printStackTrace();
+                
                 Platform.runLater(() -> {
-                    addMessageToChat("系统", "抱歉，发生了错误: " + e.getMessage(), false);
+                    addMessageToChat("系统", "抱歉，处理您的消息时出现问题，请稍后再试。", false);
                     sendButton.setDisable(false);
                 });
             }
-        }).start();
+        });
     }
 
     /**
@@ -129,5 +138,14 @@ public class ChatController {
         
         messageBox.getChildren().add(messageBubble);
         chatContainer.getChildren().add(messageBox);
+    }
+    
+    /**
+     * Cleanup resources when controller is destroyed
+     */
+    public void cleanup() {
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdown();
+        }
     }
 }

@@ -76,13 +76,29 @@ mvn javafx:run
 
 当前版本使用模拟响应进行演示。要集成真实的 AI API（如 OpenAI、Claude 等）：
 
+### 方法一：使用环境变量（推荐）
+
+设置以下环境变量：
+
+```bash
+export AI_API_URL="https://api.openai.com/v1/chat/completions"
+export AI_API_KEY="your-api-key-here"
+```
+
+Windows PowerShell:
+```powershell
+$env:AI_API_URL="https://api.openai.com/v1/chat/completions"
+$env:AI_API_KEY="your-api-key-here"
+```
+
+### 方法二：修改代码
+
 1. 打开 `src/main/java/com/pei/service/AiService.java`
-2. 配置 API URL 和 API Key：
-   ```java
-   private static final String API_URL = "your-api-endpoint";
-   private static final String API_KEY = "your-api-key";
-   ```
-3. 修改 `sendMessage()` 方法，将 `getMockResponse()` 替换为 `sendToRealApi()`
+2. 修改 `sendMessage()` 方法，将 `getMockResponse()` 替换为 `sendToRealApi()`
+
+### 安全注意事项
+
+⚠️ **重要**: 永远不要将 API 密钥硬编码在源代码中或提交到版本控制系统。始终使用环境变量或安全的配置管理系统。
 
 ### 支持的 AI API
 

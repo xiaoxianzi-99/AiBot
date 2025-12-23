@@ -8,19 +8,25 @@ import okhttp3.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * AI Service for handling AI API calls
  * This is a mock implementation that simulates AI responses
- * To use real AI APIs (like OpenAI, Claude, etc.), update the API_URL and API_KEY
+ * To use real AI APIs (like OpenAI, Claude, etc.), update the API_URL and configure API_KEY from environment
  * 
  * @author 帕斯卡的芦苇
  * @date 2025/12/23
  */
 public class AiService {
     
-    private static final String API_URL = "https://api.example.com/chat"; // Replace with actual AI API URL
-    private static final String API_KEY = "your-api-key-here"; // Replace with actual API key
+    // Configuration - Use environment variables for production
+    private static final String API_URL = System.getenv("AI_API_URL") != null 
+            ? System.getenv("AI_API_URL") 
+            : "https://api.example.com/chat";
+    private static final String API_KEY = System.getenv("AI_API_KEY") != null 
+            ? System.getenv("AI_API_KEY") 
+            : "";
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
     
     private final OkHttpClient client;
@@ -28,7 +34,13 @@ public class AiService {
     private final List<JsonObject> conversationHistory;
     
     public AiService() {
-        this.client = new OkHttpClient();
+        // Configure OkHttpClient with proper timeouts
+        this.client = new OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .connectionPool(new ConnectionPool(5, 5, TimeUnit.MINUTES))
+                .build();
         this.gson = new Gson();
         this.conversationHistory = new ArrayList<>();
     }
@@ -54,11 +66,13 @@ public class AiService {
      * @return Mock AI response
      */
     private String getMockResponse(String message) {
-        // Simulate some processing time
+        // Simulate some processing time without blocking
+        // In production, this would be replaced with actual async API call
         try {
             Thread.sleep(500);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            return "抱歉，处理被中断了。";
         }
         
         // Generate contextual responses
@@ -117,7 +131,8 @@ public class AiService {
         // Execute request
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                throw new IOException("API request failed: " + response);
+                String errorBody = response.body() != null ? response.body().string() : "No error details";
+                throw new IOException("API request failed with status " + response.code() + ": " + errorBody);
             }
             
             String responseBody = response.body().string();
