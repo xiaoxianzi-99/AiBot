@@ -5,8 +5,9 @@
 ## 功能特性
 
 - 🎨 现代化的聊天界面
-- 💬 实时对话交互
-- 🤖 AI 智能回复（支持模拟模式和真实 API 集成）
+- 💬 实时对话交互（支持流式响应）
+- 🤖 AI 智能回复（DeepSeek API 集成）
+- 📝 **Markdown 渲染支持**（支持标题、粗体、列表、代码块等）
 - 📎 文件上传分析功能（支持文本文件、代码文件等）
 - 📱 响应式设计
 - 🎯 支持中英文交互
@@ -15,8 +16,10 @@
 
 - **JavaFX 17**: 用户界面框架
 - **Maven**: 项目构建和依赖管理
-- **OkHttp**: HTTP 客户端（用于 AI API 调用）
+- **OkHttp**: HTTP 客户端（用于 DeepSeek API 调用）
 - **Gson**: JSON 处理库
+- **SnakeYAML**: YAML 配置文件解析
+- **Flexmark**: Markdown 渲染引擎（支持 GFM 扩展）
 
 ## 项目结构
 
@@ -71,7 +74,12 @@ mvn javafx:run
 1. 启动应用后，会看到一个聊天界面
 2. 在底部的输入框中输入消息
 3. 点击"发送"按钮或按回车键发送消息
-4. AI 将自动回复您的消息
+4. AI 将以流式方式逐步显示回复，支持 Markdown 格式化
+   - 支持 **粗体** 和 *斜体*
+   - 支持标题（# H1, ## H2 等）
+   - 支持列表（有序和无序）
+   - 支持代码块和行内代码
+   - 支持表格和任务列表
 
 ### 文件上传功能
 
@@ -82,37 +90,46 @@ mvn javafx:run
 
 ## AI API 集成
 
-当前版本使用模拟响应进行演示。要集成真实的 AI API（如 OpenAI、Claude 等）：
+当前版本集成了 DeepSeek Chat Completions API，支持流式响应输出。
 
-### 方法一：使用环境变量（推荐）
+### 配置 DeepSeek API
+
+#### 方法一：使用环境变量（推荐，最安全）
 
 设置以下环境变量：
 
 ```bash
-export AI_API_URL="https://api.openai.com/v1/chat/completions"
-export AI_API_KEY="your-api-key-here"
+export DEEPSEEK_API_KEY="your-deepseek-api-key-here"
 ```
 
 Windows PowerShell:
 ```powershell
-$env:AI_API_URL="https://api.openai.com/v1/chat/completions"
-$env:AI_API_KEY="your-api-key-here"
+$env:DEEPSEEK_API_KEY="your-deepseek-api-key-here"
 ```
 
-### 方法二：修改代码
+#### 方法二：修改配置文件
 
-1. 打开 `src/main/java/com/pei/service/AiService.java`
-2. 修改 `sendMessage()` 方法，将 `getMockResponse()` 替换为 `sendToRealApi()`
+1. 打开 `src/main/resources/application.yml`
+2. 在 `deepseek.apiKey` 字段填入你的 API 密钥（不推荐，仅用于测试）
+
+配置示例：
+```yaml
+deepseek:
+  apiUrl: "https://api.deepseek.com/chat/completions"
+  apiKey: ""  # 留空，使用环境变量 DEEPSEEK_API_KEY
+  model: "deepseek-chat"
+```
 
 ### 安全注意事项
 
 ⚠️ **重要**: 永远不要将 API 密钥硬编码在源代码中或提交到版本控制系统。始终使用环境变量或安全的配置管理系统。
 
-### 支持的 AI API
+### API 功能
 
-- OpenAI GPT
-- Claude
-- 其他兼容 OpenAI API 格式的服务
+- ✅ 流式响应输出
+- ✅ 多轮对话上下文保持
+- ✅ Markdown 格式化回复
+- ✅ 文件内容分析
 
 ## 自定义配置
 
@@ -131,10 +148,12 @@ $env:AI_API_KEY="your-api-key-here"
 
 ## 开发计划
 
-- [ ] 支持多轮对话上下文
+- [x] 支持多轮对话上下文
+- [x] 支持流式响应输出
+- [x] 支持 Markdown 渲染
+- [x] 支持文件上传和分析
 - [ ] 添加对话历史记录
 - [ ] 支持语音输入
-- [x] 支持文件上传和分析
 - [ ] 添加设置界面
 - [ ] 支持主题切换
 - [ ] 多语言支持
