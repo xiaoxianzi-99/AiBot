@@ -13,7 +13,14 @@ import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.MalformedInputException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -23,6 +30,11 @@ import java.util.concurrent.Executors;
  * @date 2025/12/23
  */
 public class ChatController {
+
+    // Supported file extensions for upload
+    private static final String[] SUPPORTED_TEXT_EXTENSIONS = {
+        "*.txt", "*.java", "*.py", "*.js", "*.json", "*.xml", "*.md", "*.csv"
+    };
 
     @FXML
     private VBox chatContainer;
@@ -35,6 +47,9 @@ public class ChatController {
 
     @FXML
     private Button sendButton;
+
+    @FXML
+    private Button uploadButton;
 
     private AiService aiService;
     private ExecutorService executorService;
@@ -58,7 +73,7 @@ public class ChatController {
         });
 
         // Add welcome message
-        addMessageToChat("AI Bot", "你好！我是AI助手，有什么可以帮助你的吗？", false);
+        addMessageToChat("AI Bot", "你好！我是AI助手，有什么可以帮助你的吗？\n\n💡 提示：你可以直接和我对话，也可以点击 '📎 上传文件' 按钮上传文件让我帮你分析。", false);
     }
 
     @FXML
@@ -96,6 +111,89 @@ public class ChatController {
                 Platform.runLater(() -> {
                     addMessageToChat("系统", "抱歉，处理您的消息时出现问题，请稍后再试。", false);
                     sendButton.setDisable(false);
+                });
+            }
+        });
+    }
+
+    @FXML
+    private void handleUploadFile() {
+        // Create file chooser
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("选择文件供 AI 分析");
+        
+        // Add file filters for supported text formats
+        fileChooser.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("所有支持的文件", SUPPORTED_TEXT_EXTENSIONS),
+            new FileChooser.ExtensionFilter("文本文件", "*.txt"),
+            new FileChooser.ExtensionFilter("Java文件", "*.java"),
+            new FileChooser.ExtensionFilter("Python文件", "*.py"),
+            new FileChooser.ExtensionFilter("JavaScript文件", "*.js"),
+            new FileChooser.ExtensionFilter("JSON文件", "*.json"),
+            new FileChooser.ExtensionFilter("XML文件", "*.xml"),
+            new FileChooser.ExtensionFilter("Markdown文件", "*.md"),
+            new FileChooser.ExtensionFilter("所有文件", "*.*")
+        );
+        
+        // Get the stage from any node in the scene
+        Stage stage = (Stage) chatContainer.getScene().getWindow();
+        
+        // Show file chooser
+        File selectedFile = fileChooser.showOpenDialog(stage);
+        
+        if (selectedFile == null) {
+            return; // User cancelled
+        }
+        
+        // Validate file size (max 1MB for text files)
+        long fileSizeInBytes = selectedFile.length();
+        long maxSizeInBytes = 1024 * 1024; // 1MB
+        
+        if (fileSizeInBytes > maxSizeInBytes) {
+            addMessageToChat("系统", 
+                "文件过大！请选择小于 1MB 的文件。当前文件大小：" + 
+                String.format("%.2f", fileSizeInBytes / 1024.0 / 1024.0) + " MB", false);
+            return;
+        }
+        
+        // Show system message about file upload
+        String fileName = selectedFile.getName();
+        String fileSize = String.format("%.2f KB", fileSizeInBytes / 1024.0);
+        addMessageToChat("系统", 
+            "📎 你上传了文件：" + fileName + " (" + fileSize + ")", false);
+        
+        // Disable buttons while processing
+        sendButton.setDisable(true);
+        uploadButton.setDisable(true);
+        
+        // Read and analyze file (async)
+        executorService.submit(() -> {
+            try {
+                // Read file content
+                String fileContent = Files.readString(selectedFile.toPath(), StandardCharsets.UTF_8);
+                
+                // Analyze file with AI service
+                String aiResponse = aiService.analyzeFile(fileName, fileContent);
+                
+                // Update UI on JavaFX thread
+                Platform.runLater(() -> {
+                    addMessageToChat("AI Bot", aiResponse, false);
+                    sendButton.setDisable(false);
+                    uploadButton.setDisable(false);
+                });
+            } catch (IOException e) {
+                // Log the detailed error for debugging
+                System.err.println("Error reading or analyzing file: " + e.getMessage());
+                e.printStackTrace();
+                
+                Platform.runLater(() -> {
+                    String errorMsg = "读取文件时出错：" + e.getMessage();
+                    if (e instanceof MalformedInputException) {
+                        errorMsg = "文件编码格式不支持，请确保文件是UTF-8编码的文本文件。";
+                    }
+                    addMessageToChat("系统", errorMsg, false);
+                    sendButton.setDisable(false);
+                    uploadButton.setDisable(false);
                 });
             }
         });
