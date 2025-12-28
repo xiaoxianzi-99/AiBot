@@ -1,6 +1,5 @@
 package com.pei.controller;
 
-import com.pei.model.Message;
 import com.pei.service.AiService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -33,7 +32,7 @@ public class ChatController {
 
     // Supported file extensions for upload
     private static final String[] SUPPORTED_TEXT_EXTENSIONS = {
-        "*.txt", "*.java", "*.py", "*.js", "*.json", "*.xml", "*.md", "*.csv"
+        "*.pdf","*.txt", "*.java", "*.py", "*.js", "*.json", "*.xml", "*.md", "*.csv"
     };
 
     @FXML
@@ -92,28 +91,31 @@ public class ChatController {
         
         // Disable send button while processing
         sendButton.setDisable(true);
-        
-        // Send to AI service (async)
-        executorService.submit(() -> {
-            try {
-                String aiResponse = aiService.sendMessage(userMessage);
-                
-                // Update UI on JavaFX thread
-                Platform.runLater(() -> {
-                    addMessageToChat("AI Bot", aiResponse, false);
-                    sendButton.setDisable(false);
-                });
-            } catch (Exception e) {
-                // Log the detailed error for debugging
-                System.err.println("Error calling AI service: " + e.getMessage());
-                e.printStackTrace();
-                
-                Platform.runLater(() -> {
+
+        // 为 AI 创建一个用于流式显示的消息气泡（返回内容 Label）
+        Label aiContentLabel = addStreamingAiMessageBubble("AI Bot");
+        StringBuilder buffer = new StringBuilder();
+
+        // 使用 DeepSeek 流式接口
+        executorService.submit(() -> aiService.sendMessageStream(
+                userMessage,
+                delta -> {
+                    // 控制台实时打印增量内容，方便调试
+                    System.out.print(delta);
+                    // 累积文本
+                    buffer.append(delta);
+                    String text = buffer.toString();
+                    // 回到 JavaFX 应用线程更新回答框
+                    Platform.runLater(() -> aiContentLabel.setText(text));
+                },
+                error -> Platform.runLater(() -> {
+                    System.err.println("Error calling AI service: " + error.getMessage());
+                    error.printStackTrace();
                     addMessageToChat("系统", "抱歉，处理您的消息时出现问题，请稍后再试。", false);
                     sendButton.setDisable(false);
-                });
-            }
-        });
+                }),
+                () -> Platform.runLater(() -> sendButton.setDisable(false))
+        ));
     }
 
     @FXML
@@ -200,10 +202,7 @@ public class ChatController {
     }
 
     /**
-     * Add a message to the chat display
-     * @param sender The sender name
-     * @param content The message content
-     * @param isUser Whether this is a user message
+     * Add a message to the chat display（一次性文本，用于用户消息、系统提示、非流式 AI 回复）
      */
     private void addMessageToChat(String sender, String content, boolean isUser) {
         // Create message container
@@ -238,7 +237,35 @@ public class ChatController {
         messageBox.getChildren().add(messageBubble);
         chatContainer.getChildren().add(messageBox);
     }
-    
+
+    /**
+     * 创建一个 AI 流式回复气泡，返回其中的内容 Label，供流式更新使用。
+     */
+    private Label addStreamingAiMessageBubble(String sender) {
+        HBox messageBox = new HBox(10);
+        messageBox.setPadding(new Insets(5, 10, 5, 10));
+
+        VBox messageBubble = new VBox(5);
+        messageBubble.setMaxWidth(500);
+        messageBubble.setPadding(new Insets(10));
+
+        Label senderLabel = new Label(sender);
+        senderLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
+
+        Label contentLabel = new Label("");
+        contentLabel.setWrapText(true);
+        contentLabel.setStyle("-fx-font-size: 14px;");
+
+        messageBubble.getChildren().addAll(senderLabel, contentLabel);
+        messageBubble.getStyleClass().add("ai-message");
+        messageBox.setAlignment(Pos.CENTER_LEFT);
+
+        messageBox.getChildren().add(messageBubble);
+        chatContainer.getChildren().add(messageBox);
+
+        return contentLabel;
+    }
+
     /**
      * Cleanup resources when controller is destroyed
      */
