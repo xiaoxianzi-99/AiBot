@@ -1,0 +1,5 @@
+deepseek:
+  apiUrl: "https://api.deepseek.com/chat/completions"
+  apiKey: "sk-212acd1dc13b46c1b92cb088cd995e2a" # 本地测试可以临时写入密钥，提交代码前请清空，并使用环境变量 DEEPSEEK_API_KEY
+  model: "deepseek-chat"
+
