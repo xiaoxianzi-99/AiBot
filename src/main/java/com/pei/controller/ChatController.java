@@ -1,6 +1,8 @@
 package com.pei.controller;
 
 import com.pei.service.AiService;
+import com.pei.service.MarkdownUtil;
+import com.pei.service.MarkdownTemplate;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -12,6 +14,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -92,8 +95,8 @@ public class ChatController {
         // Disable send button while processing
         sendButton.setDisable(true);
 
-        // 为 AI 创建一个用于流式显示的消息气泡（返回内容 Label）
-        Label aiContentLabel = addStreamingAiMessageBubble("AI Bot");
+        // 为 AI 创建一个用于流式显示的消息气泡（返回内容 Label 和包含它的 VBox）
+        StreamingBubble streamingBubble = addStreamingAiMessageBubble("AI Bot");
         StringBuilder buffer = new StringBuilder();
 
         // 使用 DeepSeek 流式接口
@@ -106,7 +109,7 @@ public class ChatController {
                     buffer.append(delta);
                     String text = buffer.toString();
                     // 回到 JavaFX 应用线程更新回答框
-                    Platform.runLater(() -> aiContentLabel.setText(text));
+                    Platform.runLater(() -> streamingBubble.contentLabel.setText(text));
                 },
                 error -> Platform.runLater(() -> {
                     System.err.println("Error calling AI service: " + error.getMessage());
@@ -114,7 +117,12 @@ public class ChatController {
                     addMessageToChat("系统", "抱歉，处理您的消息时出现问题，请稍后再试。", false);
                     sendButton.setDisable(false);
                 }),
-                () -> Platform.runLater(() -> sendButton.setDisable(false))
+                () -> Platform.runLater(() -> {
+                    // 流式传输完成后，将纯文本转换为 Markdown HTML 并用 WebView 替换 Label
+                    String finalText = buffer.toString();
+                    replaceWithMarkdownView(streamingBubble.messageBubble, streamingBubble.contentLabel, finalText);
+                    sendButton.setDisable(false);
+                })
         ));
     }
 
@@ -177,9 +185,9 @@ public class ChatController {
                 // Analyze file with AI service
                 String aiResponse = aiService.analyzeFile(fileName, fileContent);
                 
-                // Update UI on JavaFX thread
+                // Update UI on JavaFX thread with Markdown rendering
                 Platform.runLater(() -> {
-                    addMessageToChat("AI Bot", aiResponse, false);
+                    addMarkdownMessageToChat("AI Bot", aiResponse, false);
                     sendButton.setDisable(false);
                     uploadButton.setDisable(false);
                 });
@@ -239,9 +247,9 @@ public class ChatController {
     }
 
     /**
-     * 创建一个 AI 流式回复气泡，返回其中的内容 Label，供流式更新使用。
+     * 创建一个 AI 流式回复气泡，返回其中的内容 Label 和包含它的 VBox，供流式更新使用。
      */
-    private Label addStreamingAiMessageBubble(String sender) {
+    private StreamingBubble addStreamingAiMessageBubble(String sender) {
         HBox messageBox = new HBox(10);
         messageBox.setPadding(new Insets(5, 10, 5, 10));
 
@@ -263,7 +271,112 @@ public class ChatController {
         messageBox.getChildren().add(messageBubble);
         chatContainer.getChildren().add(messageBox);
 
-        return contentLabel;
+        return new StreamingBubble(messageBubble, contentLabel);
+    }
+
+    /**
+     * 添加一个使用 Markdown 渲染的消息（用于非流式的 AI 回复，如文件分析）
+     */
+    private void addMarkdownMessageToChat(String sender, String content, boolean isUser) {
+        // Create message container
+        HBox messageBox = new HBox(10);
+        messageBox.setPadding(new Insets(5, 10, 5, 10));
+        
+        // Create message bubble
+        VBox messageBubble = new VBox(5);
+        messageBubble.setMaxWidth(500);
+        messageBubble.setPadding(new Insets(10));
+        
+        // Sender label
+        Label senderLabel = new Label(sender);
+        senderLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
+        
+        // Convert Markdown to HTML and display in WebView
+        String htmlContent = MarkdownTemplate.wrap(MarkdownUtil.toHtml(content));
+        WebView contentView = new WebView();
+        contentView.getEngine().loadContent(htmlContent);
+        contentView.setPrefHeight(100); // Initial height, will adjust
+        contentView.setMaxWidth(480);
+        
+        // Adjust WebView height based on content
+        contentView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+            if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
+                try {
+                    // Get document height and adjust WebView
+                    String heightText = contentView.getEngine().executeScript(
+                        "document.body.scrollHeight"
+                    ).toString();
+                    double height = Double.parseDouble(heightText);
+                    contentView.setPrefHeight(height + 10);
+                } catch (Exception e) {
+                    // Fallback to default height
+                    contentView.setPrefHeight(100);
+                }
+            }
+        });
+        
+        messageBubble.getChildren().addAll(senderLabel, contentView);
+        
+        // Style based on sender
+        if (isUser) {
+            messageBubble.getStyleClass().add("user-message");
+            messageBox.setAlignment(Pos.CENTER_RIGHT);
+        } else {
+            messageBubble.getStyleClass().add("ai-message");
+            messageBox.setAlignment(Pos.CENTER_LEFT);
+        }
+        
+        messageBox.getChildren().add(messageBubble);
+        chatContainer.getChildren().add(messageBox);
+    }
+
+    /**
+     * 将流式传输完成的纯文本 Label 替换为 Markdown 渲染的 WebView
+     */
+    private void replaceWithMarkdownView(VBox messageBubble, Label contentLabel, String markdownText) {
+        // Convert Markdown to HTML
+        String htmlContent = MarkdownTemplate.wrap(MarkdownUtil.toHtml(markdownText));
+        
+        // Create WebView
+        WebView contentView = new WebView();
+        contentView.getEngine().loadContent(htmlContent);
+        contentView.setPrefHeight(100); // Initial height
+        contentView.setMaxWidth(480);
+        
+        // Adjust WebView height based on content
+        contentView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+            if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
+                try {
+                    String heightText = contentView.getEngine().executeScript(
+                        "document.body.scrollHeight"
+                    ).toString();
+                    double height = Double.parseDouble(heightText);
+                    contentView.setPrefHeight(height + 10);
+                } catch (Exception e) {
+                    contentView.setPrefHeight(100);
+                }
+            }
+        });
+        
+        // Replace Label with WebView in the messageBubble
+        int labelIndex = messageBubble.getChildren().indexOf(contentLabel);
+        if (labelIndex >= 0) {
+            messageBubble.getChildren().remove(labelIndex);
+            messageBubble.getChildren().add(labelIndex, contentView);
+        }
+    }
+
+    /**
+     * 用于保存流式消息气泡的 VBox 和 Label 引用的辅助类
+     */
+    private static class StreamingBubble {
+        final VBox messageBubble;
+        final Label contentLabel;
+        
+        StreamingBubble(VBox messageBubble, Label contentLabel) {
+            this.messageBubble = messageBubble;
+            this.contentLabel = contentLabel;
+        }
     }
 
     /**
