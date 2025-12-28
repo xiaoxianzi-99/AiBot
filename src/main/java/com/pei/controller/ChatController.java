@@ -18,6 +18,7 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.concurrent.ExecutorService;
@@ -29,6 +30,11 @@ import java.util.concurrent.Executors;
  * @date 2025/12/23
  */
 public class ChatController {
+
+    // Supported file extensions for upload
+    private static final String[] SUPPORTED_TEXT_EXTENSIONS = {
+        "*.txt", "*.java", "*.py", "*.js", "*.json", "*.xml", "*.md", "*.csv"
+    };
 
     @FXML
     private VBox chatContainer;
@@ -118,7 +124,7 @@ public class ChatController {
         
         // Add file filters for supported text formats
         fileChooser.getExtensionFilters().addAll(
-            new FileChooser.ExtensionFilter("所有支持的文件", "*.txt", "*.java", "*.py", "*.js", "*.json", "*.xml", "*.md", "*.csv"),
+            new FileChooser.ExtensionFilter("所有支持的文件", SUPPORTED_TEXT_EXTENSIONS),
             new FileChooser.ExtensionFilter("文本文件", "*.txt"),
             new FileChooser.ExtensionFilter("Java文件", "*.java"),
             new FileChooser.ExtensionFilter("Python文件", "*.py"),
@@ -182,7 +188,7 @@ public class ChatController {
                 
                 Platform.runLater(() -> {
                     String errorMsg = "读取文件时出错：" + e.getMessage();
-                    if (e.getMessage() != null && e.getMessage().contains("MalformedInputException")) {
+                    if (e instanceof MalformedInputException) {
                         errorMsg = "文件编码格式不支持，请确保文件是UTF-8编码的文本文件。";
                     }
                     addMessageToChat("系统", errorMsg, false);

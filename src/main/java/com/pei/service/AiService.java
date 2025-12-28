@@ -126,8 +126,9 @@ public class AiService {
     private String analyzeFileContent(String message) {
         // Extract file name if present
         String fileName = "未知文件";
-        if (message.contains("我上传了一个文件：")) {
-            int start = message.indexOf("我上传了一个文件：") + 9;
+        String fileNamePrefix = "我上传了一个文件：";
+        if (message.contains(fileNamePrefix)) {
+            int start = message.indexOf(fileNamePrefix) + fileNamePrefix.length();
             int end = message.indexOf("\n", start);
             if (end > start) {
                 fileName = message.substring(start, end).trim();
@@ -150,8 +151,8 @@ public class AiService {
         analysis.append("文件名：").append(fileName).append("\n");
         analysis.append("文件大小：").append(fileContent.length()).append(" 字符\n\n");
         
-        // Count lines
-        int lineCount = fileContent.split("\n").length;
+        // Count lines - handle empty files correctly
+        int lineCount = fileContent.isEmpty() ? 0 : fileContent.split("\n", -1).length;
         analysis.append("行数：").append(lineCount).append(" 行\n\n");
         
         // Detect file type and content
