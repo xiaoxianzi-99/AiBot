@@ -44,6 +44,13 @@
                 <Insets top="10" right="15" bottom="15" left="15"/>
             </padding>
             <HBox spacing="10" alignment="CENTER">
+                <Button fx:id="uploadButton" 
+                       text="📎 上传文件" 
+                       onAction="#handleUploadFile"
+                       styleClass="upload-button"
+                       prefWidth="100"
+                       prefHeight="60">
+                </Button>
                 <TextArea fx:id="messageInput" 
                          promptText="输入消息..." 
                          wrapText="true"

@@ -61,6 +61,24 @@ public class AiService {
     }
     
     /**
+     * Analyze a file and get AI response
+     * @param fileName The name of the file
+     * @param fileContent The content of the file
+     * @return AI analysis response
+     * @throws IOException if network error occurs
+     */
+    public String analyzeFile(String fileName, String fileContent) throws IOException {
+        // Build a prompt for file analysis
+        String prompt = "我上传了一个文件：" + fileName + "\n\n" +
+                        "文件内容如下：\n" +
+                        "```\n" + fileContent + "\n```\n\n" +
+                        "请分析这个文件的内容并给出详细的解释。";
+        
+        // Use the existing sendMessage method
+        return sendMessage(prompt);
+    }
+    
+    /**
      * Mock AI response for demonstration
      * Note: The delay here simulates network latency for demonstration purposes
      * In production with real API, this delay would naturally occur during HTTP request
@@ -80,21 +98,97 @@ public class AiService {
         // Generate contextual responses
         String lowerMessage = message.toLowerCase();
         
-        if (lowerMessage.contains("你好") || lowerMessage.contains("hello") || lowerMessage.contains("hi")) {
-            return "你好！很高兴见到你。我是一个AI助手，可以和你聊天、回答问题。有什么我可以帮助你的吗？";
+        // Handle file analysis requests
+        if (lowerMessage.contains("我上传了一个文件") || lowerMessage.contains("文件内容如下")) {
+            return analyzeFileContent(message);
+        } else if (lowerMessage.contains("你好") || lowerMessage.contains("hello") || lowerMessage.contains("hi")) {
+            return "你好！很高兴见到你。我是一个AI助手，可以和你聊天、回答问题，还可以帮你分析上传的文件。有什么我可以帮助你的吗？";
         } else if (lowerMessage.contains("名字") || lowerMessage.contains("name")) {
-            return "我是AI Bot，一个智能聊天助手。我使用JavaFX构建，可以帮助你解答问题和进行对话。";
+            return "我是AI Bot，一个智能聊天助手。我使用JavaFX构建，可以帮助你解答问题、进行对话，以及分析你上传的文件内容。";
         } else if (lowerMessage.contains("天气") || lowerMessage.contains("weather")) {
             return "抱歉，我目前还不能查询实时天气信息。这个功能可以通过集成天气API来实现。";
         } else if (lowerMessage.contains("功能") || lowerMessage.contains("能做什么") || lowerMessage.contains("what can you do")) {
-            return "我可以：\n1. 和你进行自然对话\n2. 回答各种问题\n3. 提供信息和建议\n4. 学习和理解上下文\n\n注意：当前版本使用模拟响应，可以通过配置真实的AI API来获得更强大的功能。";
+            return "我可以：\n1. 和你进行自然对话\n2. 回答各种问题\n3. 提供信息和建议\n4. 分析你上传的文件内容（支持文本文件）\n5. 学习和理解上下文\n\n注意：当前版本使用模拟响应，可以通过配置真实的AI API来获得更强大的功能。";
         } else if (lowerMessage.contains("谢谢") || lowerMessage.contains("thank")) {
-            return "不客气！很高兴能帮到你。如果还有其他问题，随时问我！";
+            return "不客气！很高兴能帮到你。如果还有其他问题或想分析文件，随时告诉我！";
         } else if (lowerMessage.contains("再见") || lowerMessage.contains("bye")) {
             return "再见！祝你有美好的一天！";
         } else {
             return "我理解你说的是：「" + message + "」\n\n这是一个演示版本的AI助手。我已经收到你的消息，可以根据需要进行回复。如果需要接入真实的AI API（如OpenAI、Claude等），请在AiService.java中配置相应的API端点和密钥。";
         }
+    }
+    
+    /**
+     * Analyze file content from the message
+     * @param message The message containing file information
+     * @return Analysis result
+     */
+    private String analyzeFileContent(String message) {
+        // Extract file name if present
+        String fileName = "未知文件";
+        if (message.contains("我上传了一个文件：")) {
+            int start = message.indexOf("我上传了一个文件：") + 9;
+            int end = message.indexOf("\n", start);
+            if (end > start) {
+                fileName = message.substring(start, end).trim();
+            }
+        }
+        
+        // Extract file content
+        String fileContent = "";
+        if (message.contains("```")) {
+            int start = message.indexOf("```") + 3;
+            int end = message.lastIndexOf("```");
+            if (end > start) {
+                fileContent = message.substring(start, end).trim();
+            }
+        }
+        
+        // Generate analysis based on file characteristics
+        StringBuilder analysis = new StringBuilder();
+        analysis.append("📄 文件分析报告\n\n");
+        analysis.append("文件名：").append(fileName).append("\n");
+        analysis.append("文件大小：").append(fileContent.length()).append(" 字符\n\n");
+        
+        // Count lines
+        int lineCount = fileContent.split("\n").length;
+        analysis.append("行数：").append(lineCount).append(" 行\n\n");
+        
+        // Detect file type and content
+        String extension = "";
+        if (fileName.contains(".")) {
+            extension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+        }
+        
+        analysis.append("📊 内容概览：\n");
+        
+        if (extension.equals("java")) {
+            analysis.append("这是一个Java源代码文件。\n");
+            if (fileContent.contains("class ")) {
+                analysis.append("✓ 包含类定义\n");
+            }
+            if (fileContent.contains("public ") || fileContent.contains("private ")) {
+                analysis.append("✓ 包含访问修饰符\n");
+            }
+            if (fileContent.contains("import ")) {
+                analysis.append("✓ 包含导入语句\n");
+            }
+        } else if (extension.equals("txt")) {
+            analysis.append("这是一个纯文本文件。\n");
+        } else if (extension.equals("json")) {
+            analysis.append("这是一个JSON数据文件。\n");
+        } else if (extension.equals("xml")) {
+            analysis.append("这是一个XML文件。\n");
+        } else {
+            analysis.append("文件类型：").append(extension.isEmpty() ? "未知" : extension.toUpperCase()).append("\n");
+        }
+        
+        analysis.append("\n💡 建议：\n");
+        analysis.append("• 文件内容已成功读取\n");
+        analysis.append("• 如需更深入的分析，可以配置真实的AI API\n");
+        analysis.append("• 当前版本提供基础的文件信息统计\n");
+        
+        return analysis.toString();
     }
     
     /**
