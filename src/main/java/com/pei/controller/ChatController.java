@@ -35,7 +35,7 @@ public class ChatController {
 
     // Supported file extensions for upload
     private static final String[] SUPPORTED_TEXT_EXTENSIONS = {
-        "*.pdf","*.txt", "*.java", "*.py", "*.js", "*.json", "*.xml", "*.md", "*.csv"
+        "*.txt", "*.java", "*.py", "*.js", "*.json", "*.xml", "*.md", "*.csv"
     };
 
     @FXML

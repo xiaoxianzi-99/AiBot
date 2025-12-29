@@ -5,8 +5,8 @@ import com.vladsch.flexmark.ext.emoji.EmojiExtension;
 import com.vladsch.flexmark.ext.gfm.strikethrough.StrikethroughExtension;
 import com.vladsch.flexmark.ext.gfm.tasklist.TaskListExtension;
 import com.vladsch.flexmark.ext.tables.TablesExtension;
-import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.html.HtmlRenderer;
+import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.data.MutableDataSet;
 
 import java.util.Arrays;
@@ -23,11 +23,18 @@ public class MarkdownUtil {
                     AutolinkExtension.create(),
                     EmojiExtension.create()
             ));
+
     private static final Parser PARSER = Parser.builder(OPTIONS).build();
     private static final HtmlRenderer RENDERER = HtmlRenderer.builder(OPTIONS).build();
 
+    /**
+     * 将 Markdown 文本转换为 HTML 片段（不包含 &lt;html&gt; 外壳），
+     * 由 {@link MarkdownTemplate#wrap(String)} 负责包裹统一样式。
+     */
     public static String toHtml(String markdown) {
-        if (markdown == null || markdown.isEmpty()) return "";
+        if (markdown == null || markdown.isEmpty()) {
+            return "";
+        }
         return RENDERER.render(PARSER.parse(markdown));
     }
 }
