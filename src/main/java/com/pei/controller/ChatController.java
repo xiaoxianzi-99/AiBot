@@ -319,7 +319,13 @@ public class ChatController {
                 // Ensure we have a current conversation
                 if (currentConversation == null) {
                     Platform.runLater(this::createNewConversation);
-                    Thread.sleep(100); // Give time for conversation creation
+                    // Wait briefly for UI update (better approach would be using CompletableFuture)
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
                 }
                 
                 // Read file content
@@ -327,7 +333,9 @@ public class ChatController {
                 
                 // Create user message for file upload
                 String userMessage = "我上传了文件：" + fileName;
-                databaseService.saveMessage(currentConversation.getId(), "user", userMessage);
+                if (currentConversation != null) {
+                    databaseService.saveMessage(currentConversation.getId(), "user", userMessage);
+                }
                 
                 // Analyze file with AI service
                 String aiResponse = aiService.analyzeFile(fileName, fileContent);
@@ -342,11 +350,13 @@ public class ChatController {
                     addMarkdownMessageToChat("AI Bot", aiResponse, false);
                     // Refresh conversation list to update timestamp
                     loadConversations();
-                    conversationListView.getSelectionModel().select(currentConversation);
+                    if (currentConversation != null) {
+                        conversationListView.getSelectionModel().select(currentConversation);
+                    }
                     sendButton.setDisable(false);
                     uploadButton.setDisable(false);
                 });
-            } catch (IOException | InterruptedException e) {
+            } catch (IOException e) {
                 // Log the detailed error for debugging
                 System.err.println("Error reading or analyzing file: " + e.getMessage());
                 e.printStackTrace();
