@@ -39,3 +39,6 @@ build/
 .DS_Store
 /.idea/
 
+### SQLite Database ###
+*.db
+*.db-journal
