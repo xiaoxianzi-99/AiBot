@@ -18,7 +18,7 @@ public class AiBotApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(AiBotApplication.class.getResource("/fxml/chat-view.fxml"));
-        Scene scene = new Scene(fxmlLoader.load(), 800, 600);
+        Scene scene = new Scene(fxmlLoader.load(), 1200, 600);
         
         // Add CSS styling
         scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
