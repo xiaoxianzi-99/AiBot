@@ -66,10 +66,19 @@ public class DatabaseService {
     }
     
     /**
-     * Get database connection
+     * Get database connection with foreign key support enabled
      */
     private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL);
+        Connection conn = DriverManager.getConnection(DB_URL);
+        try {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("PRAGMA foreign_keys = ON");
+            }
+        } catch (SQLException e) {
+            conn.close();
+            throw e;
+        }
+        return conn;
     }
     
     /**
